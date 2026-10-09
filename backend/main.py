@@ -335,6 +335,7 @@ def get_dispatch():
             blackout_start_hour=18,
 
             blackout_end_hour=21,
+            grid_available=SYSTEM_STATE["grid_available"],
         )
 
         mode = "ISLAND"
@@ -453,6 +454,7 @@ def get_metrics():
             blackout_start_hour=18,
 
             blackout_end_hour=21,
+            grid_available=SYSTEM_STATE["grid_available"],
         )
     )
 
@@ -710,6 +712,7 @@ def get_resilience():
             blackout_start_hour=18,
 
             blackout_end_hour=21,
+            grid_available=SYSTEM_STATE["grid_available"],
         )
     )
 
@@ -747,6 +750,7 @@ def get_sustainability():
             initial_soc_kwh=400,
             blackout_start_hour=18,
             blackout_end_hour=21,
+            grid_available=SYSTEM_STATE["grid_available"],
         )
 
     factor = float(os.getenv("GRID_EMISSIONS_KG_CO2_PER_KWH", "0.708"))
@@ -852,6 +856,7 @@ def get_battery_telemetry():
             initial_soc_kwh=400,
             blackout_start_hour=18,
             blackout_end_hour=21,
+            grid_available=SYSTEM_STATE["grid_available"],
         )
     return estimate_battery_telemetry(forecast, dispatch)
 
