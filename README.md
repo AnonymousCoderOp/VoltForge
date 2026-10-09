@@ -83,6 +83,7 @@ VoltForge/
     ├── resilience.py
     ├── battery.py
     ├── simulator.py
+    ├── requirements.txt
     ├── optimizer_schedule.csv
     └── resilience_schedule.csv
 ```
@@ -130,10 +131,10 @@ source .venv/bin/activate
 
 ```bash
 python -m pip install --upgrade pip
-python -m pip install fastapi "uvicorn[standard]" pandas numpy xgboost scikit-learn scipy
+python -m pip install -r requirements.txt
 ```
 
-The first command updates `pip` within the active environment. The second installs FastAPI, the Uvicorn development server, data-science libraries, XGBoost, and SciPy.
+The first command updates `pip` within the active environment. The second installs the backend dependencies declared in `backend/requirements.txt`, so you do not have to install each package manually.
 
 ### 4. Start the API
 
@@ -237,7 +238,7 @@ These calls mark the grid unavailable, inspect the resulting dispatch response, 
 
 ## Roadmap
 
-- Add a dependency lock/requirements file for reproducible environment setup.
+- Pin and lock dependency versions after testing a known-good environment for more reproducible installs.
 - Evaluate forecasts on documented real or benchmark datasets with time-aware validation.
 - Add baseline comparisons for dispatch cost and feasibility under identical scenarios.
 - Expand scenario testing and report critical-load served/unserved energy transparently.
