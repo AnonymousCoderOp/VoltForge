@@ -227,7 +227,7 @@ function App() {
     );
     const failed = results
       .map((result, index) => result.status === "rejected" ? endpoints[index][0] : null)
-      .filter((path): path is string => Boolean(path));
+      .filter((path) => path !== null);
 
     setApiConnected(failed.length < endpoints.length);
     if (failed.length === endpoints.length) {
