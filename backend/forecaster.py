@@ -34,8 +34,11 @@ LOAD_FEATURES = [
 def generate_historical_data(days: int = 90) -> pd.DataFrame:
     rng = np.random.default_rng(RANDOM_SEED)
 
+    # Keep synthetic history aligned with the current hour so rolling
+    # analytics and forecasts do not expose stale hard-coded dates.
+    end_timestamp = pd.Timestamp.now().floor("h")
     timestamps = pd.date_range(
-        start="2026-01-01",
+        end=end_timestamp,
         periods=days * 24,
         freq="h",
     )
