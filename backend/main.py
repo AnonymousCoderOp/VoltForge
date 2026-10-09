@@ -760,7 +760,14 @@ def get_sustainability():
 @app.get("/analytics/financial-history")
 def get_financial_history():
     """Return a repeatable 30-day simulation derived from synthetic training data."""
-    history = historical_data.tail(30 * 24).copy()
+    # Use the last 30 completed calendar days in the current local clock.
+    # Excluding today avoids presenting a partial day as a complete daily total.
+    window_end = pd.Timestamp.now().normalize()
+    window_start = window_end - pd.Timedelta(days=30)
+    history = historical_data.loc[
+        (historical_data["timestamp"] >= window_start)
+        & (historical_data["timestamp"] < window_end)
+    ].copy()
     history["date"] = history["timestamp"].dt.strftime("%Y-%m-%d")
 
     def tariff_for_hour(hour: int) -> float:
@@ -794,6 +801,8 @@ def get_financial_history():
     return {
         "source": "synthetic_historical_simulation_not_metered_billing_data",
         "days": len(daily),
+        "period_start": daily["date"].iloc[0] if not daily.empty else None,
+        "period_end": daily["date"].iloc[-1] if not daily.empty else None,
         "currency": "INR",
         "methodology": (
             "Cost without AI assumes all load is grid supplied. Cost with AI applies "
