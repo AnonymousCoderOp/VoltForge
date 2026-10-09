@@ -1,5 +1,12 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
+
+import asyncio
+import os
+
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from battery_telemetry import estimate_battery_telemetry
+from sustainability import calculate_sustainability
 
 import pandas as pd
 
@@ -724,3 +731,147 @@ def get_resilience():
             results
         ),
     }
+
+# ============================================================
+# SUSTAINABILITY METRICS
+# ============================================================
+
+@app.get("/sustainability")
+def get_sustainability():
+    """Return estimated sustainability indicators for the current 24-hour dispatch."""
+    forecast = generate_current_forecast(
+        cloud_override=SYSTEM_STATE["cloud_cover"],
+        load_spike=SYSTEM_STATE["load_spike"],
+    )
+    if SYSTEM_STATE["grid_available"]:
+        dispatch = optimize_dispatch(forecast, initial_soc_kwh=400)
+    else:
+        dispatch, _ = optimize_resilience(
+            forecast,
+            initial_soc_kwh=400,
+            blackout_start_hour=18,
+            blackout_end_hour=21,
+        )
+
+    factor = float(os.getenv("GRID_EMISSIONS_KG_CO2_PER_KWH", "0.708"))
+    return calculate_sustainability(forecast, dispatch, factor)
+
+
+# ============================================================
+# 30-DAY FINANCIAL HISTORY (DETERMINISTIC SIMULATED DATA)
+# ============================================================
+
+@app.get("/analytics/financial-history")
+def get_financial_history():
+    """Return a repeatable 30-day simulation derived from synthetic training data."""
+    history = historical_data.tail(30 * 24).copy()
+    history["date"] = history["timestamp"].dt.strftime("%Y-%m-%d")
+
+    def tariff_for_hour(hour: int) -> float:
+        if 0 <= hour < 6:
+            return 4.0
+        if 6 <= hour < 18:
+            return 8.0
+        if 18 <= hour < 22:
+            return 15.0
+        return 6.0
+
+    history["tariff_rs_per_kwh"] = history["timestamp"].dt.hour.map(tariff_for_hour)
+    history["cost_without_ai_rs"] = history["load_kw"] * history["tariff_rs_per_kwh"]
+    history["grid_after_solar_kw"] = (
+        history["load_kw"] - history["solar_kw"].clip(lower=0)
+    ).clip(lower=0)
+    history["solar_aware_cost_rs"] = (
+        history["grid_after_solar_kw"] * history["tariff_rs_per_kwh"]
+    )
+
+    daily = history.groupby("date", as_index=False).agg(
+        cost_without_ai_rs=("cost_without_ai_rs", "sum"),
+        cost_with_ai_rs=("solar_aware_cost_rs", "sum"),
+        load_energy_kwh=("load_kw", "sum"),
+        solar_generation_kwh=("solar_kw", "sum"),
+    )
+    daily["estimated_savings_rs"] = (
+        daily["cost_without_ai_rs"] - daily["cost_with_ai_rs"]
+    ).clip(lower=0)
+
+    return {
+        "source": "synthetic_historical_simulation_not_metered_billing_data",
+        "days": len(daily),
+        "currency": "INR",
+        "methodology": (
+            "Cost without AI assumes all load is grid supplied. Cost with AI applies "
+            "simulated solar generation directly against load; it is an indicative "
+            "solar-aware comparison, not a replay of 30 MILP schedules or actual bills."
+        ),
+        "summary": {
+            "cost_without_ai_rs": round(float(daily["cost_without_ai_rs"].sum()), 2),
+            "cost_with_ai_rs": round(float(daily["cost_with_ai_rs"].sum()), 2),
+            "estimated_savings_rs": round(float(daily["estimated_savings_rs"].sum()), 2),
+            "estimated_savings_pct": round(
+                float(daily["estimated_savings_rs"].sum()
+                / daily["cost_without_ai_rs"].sum() * 100)
+                if daily["cost_without_ai_rs"].sum() > 0 else 0.0, 2
+            ),
+        },
+        "daily": [
+            {
+                "date": row["date"],
+                "cost_without_ai_rs": round(float(row["cost_without_ai_rs"]), 2),
+                "cost_with_ai_rs": round(float(row["cost_with_ai_rs"]), 2),
+                "estimated_savings_rs": round(float(row["estimated_savings_rs"]), 2),
+                "load_energy_kwh": round(float(row["load_energy_kwh"]), 2),
+                "solar_generation_kwh": round(float(row["solar_generation_kwh"]), 2),
+            }
+            for _, row in daily.iterrows()
+        ],
+    }
+
+
+# ============================================================
+# BATTERY TELEMETRY ESTIMATES
+# ============================================================
+
+@app.get("/battery/telemetry")
+def get_battery_telemetry():
+    """Return estimated battery indicators; no physical sensors are connected."""
+    forecast = generate_current_forecast(
+        cloud_override=SYSTEM_STATE["cloud_cover"],
+        load_spike=SYSTEM_STATE["load_spike"],
+    )
+    if SYSTEM_STATE["grid_available"]:
+        dispatch = optimize_dispatch(forecast, initial_soc_kwh=400)
+    else:
+        dispatch, _ = optimize_resilience(
+            forecast,
+            initial_soc_kwh=400,
+            blackout_start_hour=18,
+            blackout_end_hour=21,
+        )
+    return estimate_battery_telemetry(forecast, dispatch)
+
+
+# ============================================================
+# WEBSOCKET LIVE SNAPSHOT STREAM
+# ============================================================
+
+@app.websocket("/ws")
+async def websocket_live_updates(websocket: WebSocket):
+    """Stream current system flags and KPIs to connected frontend clients."""
+    await websocket.accept()
+    try:
+        while True:
+            payload = {
+                "type": "system_snapshot",
+                "timestamp": datetime.now().isoformat(),
+                "state": dict(SYSTEM_STATE),
+                "forecast_metrics": forecast_metrics,
+            }
+            await websocket.send_json(payload)
+            await asyncio.sleep(2)
+    except WebSocketDisconnect:
+        return
+    except Exception:
+        # A disconnected browser or network interruption should not crash the API.
+        return
+
