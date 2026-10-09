@@ -45,6 +45,7 @@ def optimize_resilience(
     initial_soc_kwh: float = INITIAL_SOC_KWH,
     blackout_start_hour: int = 18,
     blackout_end_hour: int = 21,
+    grid_available: bool = True,
 ):
     forecast = forecast.copy().reset_index(drop=True)
 
@@ -128,7 +129,10 @@ def optimize_resilience(
 
         hour = int(forecast.loc[t, "hour"])
 
-        if blackout_start_hour <= hour <= blackout_end_hour:
+        if (
+            not grid_available
+            or blackout_start_hour <= hour <= blackout_end_hour
+        ):
             upper[grid_start + t] = 0.0
         else:
             upper[grid_start + t] = np.inf
@@ -402,9 +406,8 @@ def optimize_resilience(
         hour = int(forecast.loc[t, "hour"])
 
         is_blackout = (
-            blackout_start_hour
-            <= hour
-            <= blackout_end_hour
+            not grid_available
+            or blackout_start_hour <= hour <= blackout_end_hour
         )
 
         blackout_active.append(is_blackout)
