@@ -1,18 +1,14 @@
-from datetime import datetime, timedelta
-from typing import Any
-
 import asyncio
 import os
-
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from battery_telemetry import estimate_battery_telemetry
-from sustainability import calculate_sustainability
+from datetime import datetime
+from typing import Any
 
 import pandas as pd
-
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
+from battery_telemetry import estimate_battery_telemetry
+from sustainability import calculate_sustainability
 from forecaster import (
     generate_historical_data,
     train_models,
