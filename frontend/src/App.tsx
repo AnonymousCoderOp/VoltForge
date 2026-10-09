@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
@@ -147,7 +148,7 @@ function MetricCard({
   );
 }
 
-function SectionHeading({ eyebrow, title, detail, right }: { eyebrow?: string; title: string; detail?: string; right?: React.ReactNode }) {
+function SectionHeading({ eyebrow, title, detail, right }: { eyebrow?: string; title: string; detail?: string; right?: ReactNode }) {
   return (
     <div className="section-heading">
       <div>
@@ -584,7 +585,7 @@ function App() {
               <article className="panel battery-panel">
                 <div className="panel-header"><div><div className="panel-title-row"><span className="panel-icon panel-icon-green"><BatteryCharging size={16} /></span><h3>Battery intelligence</h3></div><p>Storage capacity and estimated condition</p></div><span className="small-tag">MODEL ESTIMATE</span></div>
                 <div className="battery-gauge-wrap">
-                  <div className="battery-gauge" style={{ "--soc": `${Math.min(100, Math.max(0, Number(batterySocPct) || 0))}%` } as React.CSSProperties}>
+                  <div className="battery-gauge" style={{ "--soc": `${Math.min(100, Math.max(0, Number(batterySocPct) || 0))}%` } as CSSProperties}>
                     <div className="gauge-inner"><BatteryCharging size={25} /><strong>{number(batterySocPct, 1)}<small>%</small></strong><span>STATE OF CHARGE</span></div>
                   </div>
                   <div className="battery-gauge-side"><span>Available energy</span><strong>{number(batterySoc, 1)} <small>kWh</small></strong><div className="battery-scale"><span style={{ width: `${Math.min(100, Math.max(0, Number(batterySocPct) || 0))}%` }} /></div><div className="battery-limits"><span>0 kWh</span><span>1,000 kWh</span></div><div className="battery-reserve"><ShieldCheck size={14} /><span>Minimum reserve: 100 kWh</span></div></div>
@@ -643,7 +644,7 @@ function App() {
               <article className="panel financial-panel">
                 <div className="panel-header"><div><div className="panel-title-row"><span className="panel-icon panel-icon-violet"><TrendingUp size={16} /></span><h3>Financial performance</h3></div><p>Last 30 completed days · INR</p></div><span className="small-tag">{financialHistory?.period_start ?? "—"} — {financialHistory?.period_end ?? "—"}</span></div>
                 <div className="financial-big-number"><div><span>Estimated savings</span><strong>{financial.estimated_savings_rs === undefined ? "—" : money(financial.estimated_savings_rs)}</strong></div><div className="savings-percent"><ArrowDownRight size={16} /><strong>{number(financial.estimated_savings_pct, 2)}%</strong><span>indicative reduction</span></div></div>
-                {financialChart.length ? <div className="chart-area financial-chart"><ResponsiveContainer width="100%" height="100%"><AreaChart data={financialChart} margin={{ top: 10, right: 3, left: -15, bottom: 0 }}><defs><linearGradient id="baselineFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#93a9fb" stopOpacity={0.20} /><stop offset="100%" stopColor="#93a9fb" stopOpacity={0.01} /></linearGradient><linearGradient id="solarAwareFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#79e5a4" stopOpacity={0.22} /><stop offset="100%" stopColor="#79e5a4" stopOpacity={0.01} /></linearGradient></defs><CartesianGrid stroke="var(--chart-grid)" vertical={false} /><XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fill: "var(--chart-label)", fontSize: 9 }} interval={4} /><YAxis tickLine={false} axisLine={false} tick={{ fill: "var(--chart-label)", fontSize: 9 }} width={48} tickFormatter={(value: number) => value >= 1000 ? `₹${(value / 1000).toFixed(0)}k` : `₹${value}`} /><Tooltip contentStyle={chartTooltipStyle} labelFormatter={(_, payload) => payload?.[0]?.payload?.fullDate ?? ""} formatter={(value: number | string) => [money(Number(value))]} /><Area type="monotone" dataKey="Without optimization" stroke="#93a9fb" fill="url(#baselineFill)" strokeWidth={1.8} isAnimationActive /><Area type="monotone" dataKey="Solar-aware estimate" stroke="#79e5a4" fill="url(#solarAwareFill)" strokeWidth={2} isAnimationActive /></AreaChart></ResponsiveContainer></div> : <EmptyChart message="Financial history is loading." />}
+                {financialChart.length ? <div className="chart-area financial-chart"><ResponsiveContainer width="100%" height="100%"><AreaChart data={financialChart} margin={{ top: 10, right: 3, left: -15, bottom: 0 }}><defs><linearGradient id="baselineFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#93a9fb" stopOpacity={0.20} /><stop offset="100%" stopColor="#93a9fb" stopOpacity={0.01} /></linearGradient><linearGradient id="solarAwareFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#79e5a4" stopOpacity={0.22} /><stop offset="100%" stopColor="#79e5a4" stopOpacity={0.01} /></linearGradient></defs><CartesianGrid stroke="var(--chart-grid)" vertical={false} /><XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fill: "var(--chart-label)", fontSize: 9 }} interval={4} /><YAxis tickLine={false} axisLine={false} tick={{ fill: "var(--chart-label)", fontSize: 9 }} width={48} tickFormatter={(value: number) => value >= 1000 ? `₹${(value / 1000).toFixed(0)}k` : `₹${value}`} /><Tooltip contentStyle={chartTooltipStyle} labelFormatter={(_, payload) => payload?.[0]?.payload?.fullDate ?? ""} formatter={(value) => [money(Number(value))]} /><Area type="monotone" dataKey="Without optimization" stroke="#93a9fb" fill="url(#baselineFill)" strokeWidth={1.8} isAnimationActive /><Area type="monotone" dataKey="Solar-aware estimate" stroke="#79e5a4" fill="url(#solarAwareFill)" strokeWidth={2} isAnimationActive /></AreaChart></ResponsiveContainer></div> : <EmptyChart message="Financial history is loading." />}
                 <div className="financial-legend"><span><i className="legend-dot load-dot" />Cost without solar offset</span><span><i className="legend-dot solar-dot" />Solar-aware estimate</span></div>
                 <div className="notice-box notice-neutral"><AlertTriangle size={15} /><span>Synthetic historical simulation; not metered billing data or a replay of 30 optimized schedules.</span></div>
               </article>
