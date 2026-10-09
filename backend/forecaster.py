@@ -279,6 +279,12 @@ def forecast_next_24_hours(
         forecast["predicted_load_kw"].clip(lower=50)
     )
 
+    # Physical nighttime constraint: the solar array cannot generate at night.
+    forecast.loc[
+        ~forecast["hour"].between(6, 19),
+        "predicted_solar_kw",
+    ] = 0.0
+
     # --------------------------------------------------------
     # Electricity tariff
     # --------------------------------------------------------
